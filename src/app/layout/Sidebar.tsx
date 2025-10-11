@@ -1,19 +1,16 @@
 import { useState } from "react";
 import { 
   Home, 
-  BarChart3, 
-  Calendar, 
   Bot, 
-  TrendingUp, 
   Lightbulb, 
   Settings,
   ChevronRight,
-  ChevronDown,
-  DollarSign
+  ChevronDown
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { marketingHealthNav } from "@/features/marketing-health/nav";
 
-type PageType = "dashboard" | "health-index" | "sales-management" | "marketing" | "reservations" | "ai-coach" | "news" | "settings";
+type PageType = "dashboard" | "health-index" | "sales-management" | "marketing" | "reservations" | "ai-coach" | "news" | "settings" | "schedule";
 
 interface SidebarProps {
   className?: string;
@@ -25,21 +22,13 @@ interface MenuItem {
   icon: any;
   label: string;
   key: PageType;
+  href?: string;
   children?: MenuItem[];
 }
 
 const menuItems: MenuItem[] = [
   { icon: Home, label: "대시보드", key: "dashboard" },
-  { 
-    icon: BarChart3, 
-    label: "마케팅 건강지수", 
-    key: "health-index",
-    children: [
-      { icon: DollarSign, label: "매출 / 고객 현황 관리", key: "sales-management" },
-      { icon: Calendar, label: "예약관리", key: "reservations" },
-      { icon: TrendingUp, label: "마케팅 관리", key: "marketing" }
-    ]
-  },
+  marketingHealthNav,
   { icon: Bot, label: "AI 잘코치", key: "ai-coach" },
   { icon: Lightbulb, label: "알뜰소식", key: "news" },
   { icon: Settings, label: "설정", key: "settings" },

@@ -3,18 +3,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link, HelpCircle, BarChart3 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { HealthScoreCard } from "./components/HealthScoreCard";
-import { CustomerVisitsCard } from "./components/CustomerVisitsCard";
-import { ReviewSummaryCard } from "./components/ReviewSummaryCard";
-import { IntegratedSalesChart } from "./components/IntegratedSalesChart";
-import { AIPredictionChart } from "./components/AIPredictionChart";
-import { AISummaryBox } from "./components/AISummaryBox";
+import { HealthScoreCard } from "../components/health/HealthScoreCard";
+import { CustomerVisitsCard } from "../components/health/CustomerVisitsCard";
+import { ReviewSummaryCard } from "../components/health/ReviewSummaryCard";
+import { IntegratedSalesChart } from "../components/health/IntegratedSalesChart";
+import { AIPredictionChart } from "../components/health/AIPredictionChart";
+import { AISummaryBox } from "../components/health/AISummaryBox";
 
 interface StoreHealthIndexProps {
   onNavigateToSales: () => void;
 }
 
-export function StoreHealthIndex({ onNavigateToSales }: StoreHealthIndexProps) {
+export default function MarketingHealthIndexPage({ onNavigateToSales }: StoreHealthIndexProps) {
   const [showIndustryAverage, setShowIndustryAverage] = useState(false);
   const [showConnectionModal, setShowConnectionModal] = useState(false);
 

@@ -2,14 +2,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Settings, Plus, Brain } from "lucide-react";
-import { ReviewManagement } from "./components/ReviewManagement";
-import { LoyaltyManagement } from "./components/LoyaltyManagement";
-import { EventManagement } from "./components/EventManagement";
-import { BlogManagement } from "./components/BlogManagement";
-import { SocialMediaManagement } from "./components/SocialMediaManagement";
-import { AdManagement } from "./components/AdManagement";
-import { AICoachBanner } from "./components/AICoachBanner";
-import { CustomizationModal } from "./components/CustomizationModal";
+import { ReviewManagement } from "../components/campaign/ReviewManagement";
+import { LoyaltyManagement } from "../components/campaign/LoyaltyManagement";
+import { EventManagement } from "../components/campaign/EventManagement";
+import { BlogManagement } from "../components/campaign/BlogManagement";
+import { SocialMediaManagement } from "../components/campaign/SocialMediaManagement";
+import { AdManagement } from "../components/campaign/AdManagement";
+import { AICoachBanner } from "../components/campaign/AICoachBanner";
+import { CustomizationModal } from "../components/campaign/CustomizationModal";
 
 const defaultEnabledSections = ["review", "loyalty", "event"];
 
@@ -31,7 +31,7 @@ const sectionTitles = {
   ad: "광고관리"
 };
 
-export function MarketingManagement() {
+export default function CampaignPage() {
   const [enabledSections, setEnabledSections] = useState<string[]>(defaultEnabledSections);
   const [showCustomizationModal, setShowCustomizationModal] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);

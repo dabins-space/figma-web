@@ -10,7 +10,8 @@ export type PageType =
   | "reservations" 
   | "ai-coach" 
   | "news" 
-  | "settings";
+  | "settings"
+  | "schedule";
 
 export interface User {
   id: string;

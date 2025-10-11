@@ -1,7 +1,7 @@
 import { HealthIndexWidget } from "./widgets/HealthIndexWidget";
 import { AICoachWidget } from "./widgets/AICoachWidget";
 import { MarketingScheduleWidget } from "./widgets/MarketingScheduleWidget";
-import { AICoachBanner } from "@/features/marketing/components/AICoachBanner";
+import { AICoachBanner } from "@/features/marketing-health/components/campaign/AICoachBanner";
 
 export function Dashboard() {
   return (

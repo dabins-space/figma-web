@@ -2,9 +2,7 @@ import { useState } from "react";
 import { LoginPage } from "@/features/auth";
 import { Header, Sidebar, FloatingActionButton } from "./layout";
 import { Dashboard } from "@/features/dashboard";
-import { StoreHealthIndex } from "@/features/store-health/StoreHealthIndex";
-import { MarketingManagement } from "@/features/marketing/MarketingManagement";
-import { ReservationManagement } from "@/features/reservations/ReservationManagement";
+import { MarketingHealthRouter } from "@/features/marketing-health";
 import { AICoach } from "@/features/ai-coach/AICoach";
 import { NewsPage } from "@/features/news/NewsPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
@@ -35,22 +33,15 @@ export default function App() {
   const renderMainContent = () => {
     switch (currentPage) {
       case "health-index":
-        return <StoreHealthIndex onNavigateToSales={() => handleNavigation("sales-management")} />;
-      case "marketing":
-        return <MarketingManagement />;
+      case "sales-management":
       case "reservations":
-        return <ReservationManagement />;
+      case "marketing":
+      case "schedule":
+        return <MarketingHealthRouter page={currentPage} onNavigate={handleNavigation} />;
       case "news":
         return <NewsPage />;
       case "settings":
         return <SettingsPage />;
-      case "sales-management":
-        return (
-          <div className="p-6 bg-white min-h-screen">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">매출 / 고객 현황 관리</h1>
-            <p className="text-gray-600">매출관리 페이지가 준비 중입니다.</p>
-          </div>
-        );
       default:
         return <Dashboard />;
     }

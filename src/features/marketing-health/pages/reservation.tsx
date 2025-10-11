@@ -4,13 +4,13 @@ import { Settings, Link, HelpCircle, Brain, MessageCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { ReservationSummaryCards } from "./components/ReservationSummaryCards";
-import { ReservationTrendChart } from "./components/ReservationTrendChart";
-import { EventEffectAnalysis } from "./components/EventEffectAnalysis";
-import { TrendAnalysisSection } from "./components/TrendAnalysisSection";
-import { ReservationSettings } from "./components/ReservationSettings";
+import { ReservationSummaryCards } from "../components/reservation/ReservationSummaryCards";
+import { ReservationTrendChart } from "../components/reservation/ReservationTrendChart";
+import { EventEffectAnalysis } from "../components/reservation/EventEffectAnalysis";
+import { TrendAnalysisSection } from "../components/reservation/TrendAnalysisSection";
+import { ReservationSettings } from "../components/reservation/ReservationSettings";
 
-export function ReservationManagement() {
+export default function ReservationPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [showConnectionModal, setShowConnectionModal] = useState(false);
   const [showAICoachModal, setShowAICoachModal] = useState(false);

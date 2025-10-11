@@ -2,6 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Reset & Base Styles */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100%;
+  width: 100%;
+}
+
 /* 나눔스퀘어 NEO 폰트 */
 @font-face {
   font-family: 'NanumSquareNeo';
@@ -38,7 +57,7 @@
   src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_11-01@1.0/NanumSquareNeoTTF-eHv.woff2') format('woff2');
 }
 
-@custom-variant dark (&:is(.dark *));
+/* Dark mode support */
 
 :root {
   --font-size: 16px;
@@ -161,12 +180,15 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
 
   body {
     @apply bg-background text-foreground;
     font-family: 'NanumSquareNeo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.5;
   }
 }
 

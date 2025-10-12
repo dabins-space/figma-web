@@ -4,19 +4,26 @@
  */
 
 export interface PlanEvent {
+  id: string;
   title: string;
-  description: string;
-  start: string; // ISO8601 format
-  end: string; // ISO8601 format
-  all_day: boolean;
-  color: string;
-  attendees: string[];
-  reminders_minutes: number[];
-  labels: string[];
+  description?: string;
+  start: string;  // ISO8601
+  end: string;    // ISO8601
+  all_day?: boolean;
+  color?: string;
+  category: "Setup" | "R&D" | "Content" | "Influencer" | "Paid" | "Community" | "Ops";
+  channel?: string;
+  deliverables?: string[];
+  attendees?: string[];
+  reminders_minutes?: number[];
+  depends_on?: string[];
 }
 
 export interface MarketingPlan {
-  plan_title: string;
+  timeframe: { start: string; end: string; timezone: string };
+  summary: string;
+  assumptions: string[];
+  strategy_pillars: string[];
   events: PlanEvent[];
 }
 

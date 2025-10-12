@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "engines": {
-    "node": "20.x"
+    "node": ">=18.18"
   },
   "scripts": {
     "dev": "vite",
@@ -12,7 +12,8 @@
     "build": "vite build",
     "typecheck": "tsc -b",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview --port 5173",
+    "check:build": "npm run build && echo 'local build OK'"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.19",

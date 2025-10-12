@@ -218,13 +218,76 @@ plan.events.forEach(event => {
 
 ## 🌐 배포
 
-### Vercel에 배포
+### Vercel 배포 가이드
 
-1. Vercel에 프로젝트 연결
-2. 환경 변수 설정:
-   - `OPENAI_API_KEY`: OpenAI API 키
-   - `VITE_GOOGLE_CLIENT_ID`: Google OAuth 클라이언트 ID
-3. 자동 배포 완료!
+#### 1. 프로젝트 설정
+
+Vercel 대시보드에서 다음 설정을 사용하세요:
+
+| 설정 | 값 |
+|------|-----|
+| **Framework Preset** | Vite |
+| **Build Command** | `npm run build` |
+| **Output Directory** | `dist` |
+| **Install Command** | `npm ci` (권장) 또는 `npm install` |
+| **Node.js Version** | 18.x 이상 권장 |
+
+#### 2. 환경 변수 설정
+
+Vercel 대시보드 → Settings → Environment Variables에서 설정:
+
+**필수 환경 변수:**
+- `OPENAI_API_KEY`: OpenAI API 키 (서버리스 함수용)
+- `VITE_GOOGLE_CLIENT_ID`: Google OAuth 클라이언트 ID
+
+**선택 환경 변수:**
+- `VITE_OPENAI_API_KEY`: 클라이언트 사이드 OpenAI 호출용 (개발 모드)
+- `VITE_API_BASE_URL`: API 베이스 URL (기본값: 자동 감지)
+
+#### 3. 배포 확인
+
+```bash
+# 로컬에서 빌드 테스트
+npm run check:build
+
+# Vercel CLI로 로컬 테스트 (선택사항)
+npm run dev:vercel
+```
+
+#### 4. 자동 배포
+
+- GitHub에 푸시하면 자동으로 배포됩니다
+- `main` 브랜치: Production 배포
+- 다른 브랜치: Preview 배포
+
+#### 5. 문제 해결
+
+**빌드 실패 시:**
+
+1. **의존성 문제**
+   ```bash
+   # 로컬에서 clean install 테스트
+   rm -rf node_modules package-lock.json
+   npm install
+   npm run build
+   ```
+
+2. **Node.js 버전 문제**
+   - Vercel 프로젝트 설정에서 Node.js 18.x 이상 사용 확인
+
+3. **환경 변수 누락**
+   - Vercel 대시보드에서 필수 환경 변수 확인
+   - Production과 Preview 환경 모두 설정 필요
+
+4. **빌드 로그 확인**
+   - Vercel 대시보드 → Deployments → [실패한 배포] → Build Logs
+
+**서버리스 함수 문제:**
+- `api/` 디렉토리의 파일이 자동으로 서버리스 함수로 변환됨
+- `@vercel/node`가 devDependencies에 있는지 확인
+
+**캐시 문제:**
+- Vercel 대시보드에서 "Redeploy" 클릭 시 "Clear cache" 옵션 선택
 
 GitHub: https://github.com/dabins-space/figma-web
 Production: (Vercel URL)

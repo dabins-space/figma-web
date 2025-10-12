@@ -1,0 +1,27 @@
+# Line ending normalization
+* text=auto
+
+# Shell scripts should always use LF
+*.sh text eol=lf
+
+# TypeScript files should use LF
+*.ts text eol=lf
+*.tsx text eol=lf
+
+# Ensure bin scripts use LF
+bin/* text eol=lf
+
+# Images should be treated as binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+
+# Fonts
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+

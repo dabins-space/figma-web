@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LoginPage } from "@/features/auth";
+import OAuthCallback from "@/features/auth/OAuthCallback";
 import { Header, Sidebar, FloatingActionButton } from "./layout";
 import { Dashboard } from "@/features/dashboard";
 import { MarketingHealthRouter } from "@/features/marketing-health";
 import { AICoach } from "@/features/ai-coach/AICoach";
 import { NewsPage } from "@/features/news/NewsPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
+import { EnvWarningBanner } from "@/components/EnvWarningBanner";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { PageType } from "@/types";
@@ -14,6 +16,22 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState<PageType>("dashboard");
+
+  // URL 기반 라우팅 처리
+  useEffect(() => {
+    const path = window.location.pathname;
+    
+    // OAuth 콜백 처리
+    if (path === "/oauth/callback") {
+      // OAuthCallback 컴포넌트에서 처리하도록 플래그 설정
+      return;
+    }
+  }, []);
+
+  // OAuth 콜백 페이지 처리
+  if (window.location.pathname === "/oauth/callback") {
+    return <OAuthCallback />;
+  }
 
   // Show login page if not logged in
   if (!isLoggedIn) {
@@ -50,6 +68,11 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F5F6F8]">
       <Header />
+      
+      {/* 환경 변수 경고 배너 */}
+      <div className="lg:ml-64">
+        <EnvWarningBanner />
+      </div>
       
       <div className="flex">
         {/* Desktop Sidebar */}

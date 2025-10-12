@@ -309,6 +309,37 @@ npm run vercel:deploy  # 배포
 **캐시 문제:**
 - Vercel 대시보드에서 "Redeploy" 클릭 시 "Clear cache" 옵션 선택
 
+**흰 화면/OAuth 콜백 실패:**
+- 환경 변수가 제대로 설정되었는지 확인 (`VITE_` 접두어 필수)
+- Google Cloud Console에서 OAuth 리다이렉트 URI 확인:
+  - Production: `https://your-domain.vercel.app/oauth/callback`
+  - ⚠️ Preview URL은 매번 바뀌므로 등록 금지
+- 개발/테스트는 `npm run dev:vercel` 사용 (localhost)
+
+#### 6. 운영 지침
+
+**Google OAuth 설정**
+- ✅ **프로덕션 도메인만 사용**: `https://your-domain.vercel.app`
+- ✅ **리다이렉트 URI**: `https://your-domain.vercel.app/oauth/callback`
+- ❌ **Preview 도메인 금지**: Vercel Preview URL은 매번 바뀌므로 등록하지 마세요
+
+**로컬/프리뷰 테스트**
+```bash
+# 로컬 테스트 (권장)
+npm run dev:vercel
+# → http://localhost:3000 (고정 URL)
+# → Google Console에 http://localhost:3000/oauth/callback 등록
+
+# 프리뷰 배포는 OAuth 테스트 불가
+# → 프로덕션 배포 후 테스트하세요
+```
+
+**환경 변수 체크리스트**
+- [ ] `OPENAI_API_KEY` - Vercel Dashboard 설정 (서버용)
+- [ ] `VITE_GOOGLE_CLIENT_ID` - Vercel Dashboard 설정 (클라이언트용)
+- [ ] `VITE_GOOGLE_REDIRECT_URI` - 프로덕션 도메인 URL
+- [ ] Google Cloud Console - 위 redirect URI 등록 완료
+
 GitHub: https://github.com/dabins-space/figma-web
 Production: (Vercel URL)
 

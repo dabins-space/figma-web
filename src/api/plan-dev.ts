@@ -3,7 +3,7 @@
  * 로컬에서 직접 OpenAI API를 호출합니다.
  */
 
-import type { MarketingPlan } from './plan';
+import type { MarketingPlan } from './plan.js';
 
 const SYSTEM_PROMPT = `
 너는 소상공인(요식업)을 위한 마케팅 매니저다.
@@ -140,4 +140,3 @@ export const getMockMarketingPlan = (brief: string): MarketingPlan => {
     ]
   };
 };
-

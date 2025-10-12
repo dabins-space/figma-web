@@ -52,23 +52,49 @@ export const createMarketingPlan = async (brief: string): Promise<MarketingPlan>
   }
 
   // 프로덕션 환경에서는 Vercel 서버리스 함수 사용
+  console.log('🚀 프로덕션 모드: Vercel 서버리스 함수 호출 (/api/plan)');
+  
   try {
+    // 클라이언트 타임아웃 (60초)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
     const response = await fetch('/api/plan', {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ brief }),
     });
 
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: response.statusText }));
-      throw new Error(error.error || `Failed to create plan: ${response.statusText}`);
+      const error = await response.json().catch(() => ({ 
+        error: `HTTP ${response.status}: ${response.statusText}` 
+      }));
+      
+      console.error('❌ API Error:', {
+        status: response.status,
+        error: error.error,
+        details: error.details,
+        hint: error.hint
+      });
+      
+      throw new Error(error.error || `API 호출 실패 (${response.status}): ${response.statusText}`);
     }
 
-    return await response.json();
-  } catch (error) {
-    console.error('Error creating marketing plan:', error);
+    const data = await response.json();
+    console.log('✅ 플랜 생성 완료:', data.summary, `(${data.events?.length}개 이벤트)`);
+    return data;
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.error('⏱️ 요청 시간 초과 (60초)');
+      throw new Error('요청 시간이 초과되었습니다. 브리프를 더 간단하게 작성해주세요.');
+    }
+    
+    console.error('❌ 마케팅 플랜 생성 실패:', error.message);
     throw error;
   }
 };

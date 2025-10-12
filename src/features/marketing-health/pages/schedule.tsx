@@ -240,16 +240,41 @@ export default function Schedule() {
     }
 
     setIsLoading(true);
+    const startTime = Date.now();
+    
     try {
+      console.log("📝 마케팅 플랜 생성 시작...");
       const data = await createMarketingPlan(brief);
+      
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.log(`✅ 플랜 생성 완료 (${duration}초)`);
+      
       setPlan(data);
       // 기본적으로 모든 이벤트 선택
       if (data.events) {
         setSelectedEventIds(new Set(data.events.map(e => e.id)));
       }
+      
+      // 성공 메시지
+      alert(`✅ 마케팅 플랜이 생성되었습니다!\n\n${data.summary}\n이벤트: ${data.events.length}개`);
     } catch (error) {
-      console.error("Failed to generate plan:", error);
-      alert(error instanceof Error ? error.message : "스케줄 생성 실패");
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.error(`❌ 플랜 생성 실패 (${duration}초):`, error);
+      
+      const errorMessage = error instanceof Error ? error.message : "스케줄 생성 실패";
+      
+      // 상세한 에러 메시지
+      let alertMessage = `❌ 스케줄 생성 실패\n\n${errorMessage}`;
+      
+      if (errorMessage.includes("시간 초과")) {
+        alertMessage += "\n\n💡 팁: 브리프를 더 간단하게 작성해보세요.";
+      } else if (errorMessage.includes("API_KEY")) {
+        alertMessage += "\n\n💡 관리자: Vercel Dashboard에서 환경 변수를 확인하세요.";
+      } else if (errorMessage.includes("503") || errorMessage.includes("502")) {
+        alertMessage += "\n\n💡 서버 일시적 오류입니다. 잠시 후 다시 시도하세요.";
+      }
+      
+      alert(alertMessage);
     } finally {
       setIsLoading(false);
     }

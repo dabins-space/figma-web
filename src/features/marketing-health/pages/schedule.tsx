@@ -143,23 +143,39 @@ export default function Schedule() {
 
   // 1) GIS & gapi 로드
   useEffect(() => {
+    console.log("📡 Google API 스크립트 로딩 시작...");
+    
     const gisScript = document.createElement("script");
     gisScript.src = "https://accounts.google.com/gsi/client";
     gisScript.async = true;
     gisScript.onload = () => {
+      console.log("✅ Google Identity Services (GIS) 로드 완료");
+      
       const gapiScript = document.createElement("script");
       gapiScript.src = "https://apis.google.com/js/api.js";
       gapiScript.async = true;
       gapiScript.onload = () => {
+        console.log("✅ Google API (gapi) 로드 완료");
         if (window.gapi) {
           window.gapi.load("client", async () => {
             if (window.gapi) {
-              await window.gapi.client.init({ discoveryDocs: DISCOVERY_DOCS });
+              try {
+                await window.gapi.client.init({ discoveryDocs: DISCOVERY_DOCS });
+                console.log("✅ Google Calendar API 초기화 완료");
+              } catch (error) {
+                console.error("❌ Google Calendar API 초기화 실패:", error);
+              }
             }
           });
         }
       };
+      gapiScript.onerror = () => {
+        console.error("❌ Google API 스크립트 로드 실패");
+      };
       document.body.appendChild(gapiScript);
+    };
+    gisScript.onerror = () => {
+      console.error("❌ Google Identity Services 스크립트 로드 실패");
     };
     document.body.appendChild(gisScript);
   }, []);
@@ -188,17 +204,45 @@ export default function Schedule() {
   };
 
   const signIn = () => {
+    console.log("🔑 Google 로그인 버튼 클릭됨");
+    
+    // 환경 변수 체크
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      console.error("❌ VITE_GOOGLE_CLIENT_ID가 설정되지 않음");
+      alert("Google Client ID가 설정되지 않았습니다. 관리자에게 문의하세요.");
+      return;
+    }
+    
+    // Google API 로딩 상태 체크
+    if (!window.google?.accounts?.oauth2) {
+      console.error("❌ Google OAuth API가 로드되지 않음");
+      alert("Google 로그인 API가 아직 로드 중입니다. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+    
+    console.log("✅ 환경 변수 및 API 상태 정상, 토큰 클라이언트 초기화 중...");
     ensureTokenClient();
+    
+    if (!tokenClientRef.current) {
+      console.error("❌ 토큰 클라이언트 초기화 실패");
+      alert("Google 로그인 클라이언트 초기화에 실패했습니다.");
+      return;
+    }
+    
+    console.log("🚀 Google OAuth 토큰 요청 시작");
     tokenClientRef.current?.requestAccessToken({ prompt: "consent" });
   };
 
   const signOut = () => {
+    console.log("🚪 Google 로그아웃 시작");
     setIsSignedIn(false);
     setMyEvents([]);
     // gapi 토큰 제거
     if (window.gapi?.client) {
       (window.gapi.client as any).setToken(null);
     }
+    console.log("✅ Google 로그아웃 완료");
   };
 
   // 3) 내 구글 캘린더 불러오기 (플랜 기반 범위 자동 조정)
@@ -424,6 +468,7 @@ export default function Schedule() {
   // 개발 모드 확인
   const isDev = import.meta.env.DEV;
   const hasApiKey = !!import.meta.env.VITE_OPENAI_API_KEY;
+  const hasGoogleClientId = !!import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
@@ -455,13 +500,37 @@ export default function Schedule() {
           </div>
         )}
 
+        {/* Google 로그인 상태 안내 */}
+        {!hasGoogleClientId && (
+          <div className="px-4 py-3 rounded-lg text-sm bg-red-50 text-red-700 border border-red-200">
+            <div className="flex items-start gap-2">
+              <span className="text-lg">⚠️</span>
+              <div>
+                <div className="font-semibold">Google 로그인 불가</div>
+                <div className="text-xs mt-1">
+                  <code className="bg-red-100 px-1 rounded">VITE_GOOGLE_CLIENT_ID</code>가 설정되지 않았습니다.
+                  <br />Google 로그인 기능을 사용하려면 환경 변수를 설정하세요.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex gap-2">
           {!isSignedIn ? (
-            <button className="px-3 py-2 rounded bg-black text-white" onClick={signIn}>
+            <button 
+              className="px-3 py-2 rounded bg-black text-white hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors" 
+              onClick={signIn}
+              disabled={isLoading}
+            >
               Google 로그인
             </button>
           ) : (
-            <button className="px-3 py-2 rounded border" onClick={signOut}>
+            <button 
+              className="px-3 py-2 rounded border hover:bg-gray-50 transition-colors" 
+              onClick={signOut}
+              disabled={isLoading}
+            >
               로그아웃
             </button>
           )}

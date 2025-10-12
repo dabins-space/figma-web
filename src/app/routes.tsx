@@ -4,7 +4,6 @@ import { MarketingHealthRouter } from "@/features/marketing-health";
 import { AICoach } from "@/features/ai-coach/AICoach";
 import { NewsPage } from "@/features/news/NewsPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
-
 /**
  * Page routing configuration
  */

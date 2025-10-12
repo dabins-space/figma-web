@@ -254,11 +254,31 @@ npm run check:build
 npm run dev:vercel
 ```
 
-#### 4. 자동 배포
+#### 4. 배포 방법
 
-- GitHub에 푸시하면 자동으로 배포됩니다
-- `main` 브랜치: Production 배포
-- 다른 브랜치: Preview 배포
+**방법 1: 자동 배포 (권장)**
+- GitHub `main` 브랜치에 푸시하면 자동으로 배포됩니다
+- Preview: 다른 브랜치에 푸시
+
+**방법 2: 수동 배포 (Vercel CLI)**
+
+먼저 프로젝트 연결 (최초 1회만):
+```bash
+npx vercel link
+# → Link to existing project 선택
+# → 대표 프로젝트 선택
+```
+
+배포 실행:
+```bash
+# 한 번에 배포
+npm run deploy:vercel
+
+# 또는 단계별로
+npm run vercel:pull    # 환경 변수 가져오기
+npm run vercel:build   # Vercel 빌드
+npm run vercel:deploy  # 배포
+```
 
 #### 5. 문제 해결
 

@@ -39,7 +39,7 @@ export interface CreatePlanRequest {
 export const createMarketingPlan = async (brief: string): Promise<MarketingPlan> => {
   // 개발 환경에서는 직접 OpenAI API 호출
   if (import.meta.env.DEV) {
-    const { createMarketingPlanDev, getMockMarketingPlan } = await import('./plan-dev.js');
+    const { createMarketingPlanDev, getMockMarketingPlan } = await import('./plan-dev');
     
     // VITE_OPENAI_API_KEY가 있으면 실제 API 호출, 없으면 Mock 데이터
     if (import.meta.env.VITE_OPENAI_API_KEY) {
@@ -53,6 +53,13 @@ export const createMarketingPlan = async (brief: string): Promise<MarketingPlan>
 
   // 프로덕션 환경에서는 Vercel 서버리스 함수 사용
   console.log('🚀 프로덕션 모드: Vercel 서버리스 함수 호출 (/api/plan)');
+  
+  // 프로덕션에서도 API 키가 없으면 Mock 데이터 사용
+  if (!import.meta.env.VITE_OPENAI_API_KEY) {
+    console.warn('⚠️ 프로덕션에서 VITE_OPENAI_API_KEY가 없음 - Mock 데이터 사용');
+    const { getMockMarketingPlan } = await import('./plan-dev');
+    return getMockMarketingPlan(brief);
+  }
   
   try {
     // 클라이언트 타임아웃 (60초)

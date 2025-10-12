@@ -62,9 +62,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: "Missing brief" });
   }
 
-  if (!process.env.OPENAI_API_KEY) {
-    return res.status(500).json({ error: "OPENAI_API_KEY not configured" });
-  }
+      if (!process.env.OPENAI_API_KEY) {
+        console.warn("⚠️ OPENAI_API_KEY not configured - returning mock data");
+        // Mock 데이터 반환
+        const mockPlan = {
+          timeframe: { start: "2025-01-01", end: "2025-01-31", timezone: "Asia/Seoul" },
+          summary: "Mock 데이터: 신규 카페 마케팅 스케줄 (실제 AI 호출을 위해 OPENAI_API_KEY를 설정하세요)",
+          assumptions: ["Mock 데이터 사용", "실제 API 키 설정 필요"],
+          strategy_pillars: ["Setup", "R&D", "Content", "Influencer", "Paid", "Community", "Ops"],
+          events: [
+            {
+              id: "ev-20250101-setup-1",
+              title: "네이버플레이스 등록 및 기본 정보 입력",
+              description: "네이버플레이스에 카페 정보 등록 및 기본 설정",
+              start: "2025-01-01T10:00:00+09:00",
+              end: "2025-01-01T12:00:00+09:00",
+              all_day: false,
+              color: "#3B82F6",
+              category: "Setup" as const,
+              channel: "Naver Place",
+              deliverables: ["네이버플레이스 등록 완료"],
+              reminders_minutes: [1440, 120],
+              depends_on: []
+            }
+          ]
+        };
+        return res.status(200).json(mockPlan);
+      }
 
   console.log("[/api/plan] Request received:", { brief: brief.substring(0, 100) + '...' });
   

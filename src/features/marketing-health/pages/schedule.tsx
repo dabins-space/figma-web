@@ -1,9 +1,14 @@
 // src/features/marketing-health/pages/Schedule.tsx
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { createMarketingPlan, type MarketingPlan } from "@/api";
+import { AIChatSidebar } from "../components/AIChatSidebar";
+import type { ActionPlan, CalendarRegistrationResult } from "@/types/actionPlan";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Calendar, Clock, Target, AlertCircle, CheckCircle, XCircle } from "lucide-react";
 
 // Google API 타입 정의
 declare global {
@@ -81,65 +86,64 @@ const DISCOVERY_DOCS = [
   "https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest",
 ];
 
-// ===== 유틸 함수 =====
-
-// 날짜 유틸: 'YYYY-MM-DD' 반환
-const toYMD = (d: Date) => {
-  const z = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
-};
-
-// ✅ 종일 이벤트 end 규칙 보정: end(YYYY-MM-DD)는 종료일 익일이어야 보임
-function normalizeAllDayRange(startIsoOrDate: string, endIsoOrDate?: string) {
-  // 입력이 ISO일 수 있으므로 date만 추출
-  const start = new Date(startIsoOrDate);
-  const end = endIsoOrDate ? new Date(endIsoOrDate) : new Date(start);
-  // 만약 동일일 또는 end가 누락됐으면, end를 +1일로
-  if (toYMD(start) >= toYMD(end)) {
-    end.setDate(end.getDate() + 1);
-  }
-  return { startDate: toYMD(start), endDate: toYMD(end) };
-}
-
-// ✅ 플랜 기반 조회 윈도우 계산: plan 이벤트가 있으면 그 범위에 버퍼(±15일) 적용
-function getPlanWindow(plan?: { events?: Array<{ start: string; end: string; all_day?: boolean }> }) {
-  if (!plan?.events?.length) {
-    const now = new Date();
-    const min = new Date(now); min.setDate(min.getDate() - 30);
-    const max = new Date(now); max.setDate(max.getDate() + 90);
-    return { timeMin: min.toISOString(), timeMax: max.toISOString() };
-  }
-  let minDt = new Date(plan.events[0].start);
-  let maxDt = new Date(plan.events[0].end || plan.events[0].start);
-  for (const ev of plan.events) {
-    const s = new Date(ev.start);
-    const e = new Date(ev.end || ev.start);
-    if (s < minDt) minDt = s;
-    if (e > maxDt) maxDt = e;
-  }
-  // 버퍼 ±15일
-  minDt.setDate(minDt.getDate() - 15);
-  maxDt.setDate(maxDt.getDate() + 15);
-  return { timeMin: minDt.toISOString(), timeMax: maxDt.toISOString() };
-}
 
 export default function Schedule() {
-  const [brief, setBrief] = useState(
-`이제 막 개업한 동네 카페입니다. 
-최근 매출이 줄어 신규 고객을 늘리고 싶습니다.
-우리 강점은 깔끔한 인테리어와 핸드드립 커피입니다.
-한 달 홍보 스케줄 추천해주세요.`
-  );
-  const [plan, setPlan] = useState<MarketingPlan | null>(null);
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [myEvents, setMyEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set());
+  const [actionPlan, setActionPlan] = useState<ActionPlan | null>(null);
+  const [registrationResult, setRegistrationResult] = useState<CalendarRegistrationResult | null>(null);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [selectedActionIds, setSelectedActionIds] = useState<Set<string>>(new Set());
+  const [strategySummary, setStrategySummary] = useState<string>("");
+  const [chatWidth, setChatWidth] = useState<number>(33.33); // 챗봇 영역 너비 (1:2 비율)
+  const [isResizing, setIsResizing] = useState(false);
   
   type TokenClient = {
     requestAccessToken: (options?: { prompt?: string }) => void;
   };
   const tokenClientRef = useRef<TokenClient | null>(null);
+
+  // 리사이즈 핸들러
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsResizing(true);
+    e.preventDefault();
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isResizing) return;
+    
+    const container = document.querySelector('.resize-container') as HTMLElement;
+    if (!container) return;
+    
+    const rect = container.getBoundingClientRect();
+    const newWidth = ((e.clientX - rect.left) / rect.width) * 100;
+    
+    // 최소 20%, 최대 80%로 제한
+    const clampedWidth = Math.min(Math.max(newWidth, 20), 80);
+    setChatWidth(clampedWidth);
+  };
+
+  const handleMouseUp = () => {
+    setIsResizing(false);
+  };
+
+  // 마우스 이벤트 리스너 등록
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing]);
 
   // 1) GIS & gapi 로드
   useEffect(() => {
@@ -245,7 +249,7 @@ export default function Schedule() {
     console.log("✅ Google 로그아웃 완료");
   };
 
-  // 3) 내 구글 캘린더 불러오기 (플랜 기반 범위 자동 조정)
+  // 3) 내 구글 캘린더 불러오기
   const loadMyCalendar = async () => {
     if (!window.gapi?.client?.calendar) {
       console.error("Google Calendar API not loaded");
@@ -253,7 +257,10 @@ export default function Schedule() {
     }
 
     try {
-      const { timeMin, timeMax } = getPlanWindow(plan || undefined);
+      const now = new Date();
+      const timeMin = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString(); // 30일 전
+      const timeMax = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString(); // 90일 후
+      
       const res = await window.gapi.client.calendar.events.list({
         calendarId: "primary",
         timeMin,
@@ -276,397 +283,584 @@ export default function Schedule() {
     }
   };
 
-  // 4) GPT로 스케줄 생성 (/api/plan 호출)
-  const generatePlan = async () => {
-    if (!brief.trim()) {
-      alert("브리프를 입력해주세요");
-      return;
-    }
-
-    setIsLoading(true);
-    const startTime = Date.now();
+  // 액션 플랜 처리 함수
+  const handleActionPlanGenerated = (plan: ActionPlan) => {
+    setActionPlan(plan);
+    setRegistrationResult(null);
+    // 모든 액션 아이템을 기본 선택
+    setSelectedActionIds(new Set(plan.items.map(item => item.id)));
     
-    try {
-      console.log("📝 마케팅 플랜 생성 시작...");
-      const data = await createMarketingPlan(brief);
+    // 전략 요약 설정 (GPT가 생성한 요약 또는 기본 요약)
+    if (plan.strategy_summary) {
+      setStrategySummary(plan.strategy_summary);
+    } else {
+      // Mock 데이터용 기본 전략 요약 생성
+      const categories = [...new Set(plan.items.map(item => item.notes?.split(' | ')[0]?.replace('분류: ', '')).filter(Boolean))];
+      const priorities = plan.items.reduce((acc, item) => {
+        const priority = item.priority || 'P2';
+        acc[priority] = (acc[priority] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
       
-      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-      console.log(`✅ 플랜 생성 완료 (${duration}초)`);
+      let summary = `📊 **전략 분석 요약**\n\n`;
+      summary += `🎯 **주요 마케팅 영역**: ${categories.join(', ')}\n`;
+      summary += `⚡ **우선순위 분포**: `;
+      if (priorities.P0) summary += `긴급(${priorities.P0}개) `;
+      if (priorities.P1) summary += `중요(${priorities.P1}개) `;
+      if (priorities.P2) summary += `일반(${priorities.P2}개)`;
+      summary += `\n\n`;
       
-      setPlan(data);
-      // 기본적으로 모든 이벤트 선택
-      if (data.events) {
-        setSelectedEventIds(new Set(data.events.map(e => e.id)));
+      summary += `💡 **전략적 접근**: `;
+      if (categories.includes('소셜미디어')) summary += `디지털 네이티브 세대를 위한 소셜미디어 중심 마케팅으로 브랜드 인지도 향상. `;
+      if (categories.includes('이벤트')) summary += `체험형 이벤트를 통한 고객 참여도 증대 및 재방문 유도. `;
+      if (categories.includes('고객관리')) summary += `개인화된 고객 관리 시스템으로 장기적 관계 구축. `;
+      if (categories.includes('브랜딩')) summary += `일관된 브랜드 아이덴티티로 차별화된 시장 포지셔닝. `;
+      if (categories.includes('지역마케팅')) summary += `지역 커뮤니티 중심의 관계형 마케팅으로 신뢰도 구축.`;
+      
+      if (!summary.includes('전략적 접근')) {
+        summary += `종합적인 마케팅 접근으로 다각도의 고객 유치 및 브랜드 강화.`;
       }
       
-      // 성공 메시지
-      alert(`✅ 마케팅 플랜이 생성되었습니다!\n\n${data.summary}\n이벤트: ${data.events.length}개`);
-    } catch (error) {
-      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-      console.error(`❌ 플랜 생성 실패 (${duration}초):`, error);
+      summary += `\n\n🚀 **예상 효과**: 체계적인 실행을 통해 고객 유입 증가, 브랜드 인지도 향상, 매출 증대 효과 기대`;
       
-      const errorMessage = error instanceof Error ? error.message : "스케줄 생성 실패";
-      
-      // 상세한 에러 메시지
-      let alertMessage = `❌ 스케줄 생성 실패\n\n${errorMessage}`;
-      
-      if (errorMessage.includes("시간 초과")) {
-        alertMessage += "\n\n💡 팁: 브리프를 더 간단하게 작성해보세요.";
-      } else if (errorMessage.includes("API_KEY")) {
-        alertMessage += "\n\n💡 관리자: Vercel Dashboard에서 환경 변수를 확인하세요.";
-      } else if (errorMessage.includes("503") || errorMessage.includes("502")) {
-        alertMessage += "\n\n💡 서버 일시적 오류입니다. 잠시 후 다시 시도하세요.";
-      }
-      
-      alert(alertMessage);
-    } finally {
-      setIsLoading(false);
+      setStrategySummary(summary);
     }
   };
 
-  // 5) 선택된 이벤트만 구글 캘린더에 등록
-  const insertSelected = async () => {
-    if (!isSignedIn) {
-      alert("먼저 Google 로그인해주세요");
-      return;
-    }
-    if (!plan?.events?.length) {
-      alert("등록할 이벤트가 없습니다");
-      return;
-    }
-    if (selectedEventIds.size === 0) {
-      alert("등록할 이벤트를 선택해주세요");
-      return;
-    }
-    if (!window.gapi?.client?.calendar) {
-      alert("Google Calendar API가 로드되지 않았습니다");
+  // Google Calendar에 선택된 액션만 등록
+  const handleRegisterToCalendar = async () => {
+    if (!actionPlan || !isSignedIn) {
+      alert("액션 플랜이 없거나 Google 로그인이 필요합니다.");
       return;
     }
 
-    // ✅ 액세스 토큰 확인
-    const token = (window.gapi.client as any).getToken?.();
-    if (!token || !token.access_token) {
-      alert("인증 토큰이 없습니다. 다시 로그인해주세요.");
-      signOut();
+    if (selectedActionIds.size === 0) {
+      alert("등록할 액션을 선택해주세요.");
       return;
     }
 
-    const selectedEvents = plan.events.filter(ev => selectedEventIds.has(ev.id));
-    
-    setIsLoading(true);
-    const errors: string[] = [];
-    let successCount = 0;
+    setIsRegistering(true);
+    setRegistrationResult(null);
 
     try {
-      for (const ev of selectedEvents) {
-        try {
-          // ✅ 종일 이벤트 end 보정
-          let startParam, endParam;
-          if (ev.all_day) {
-            const { startDate, endDate } = normalizeAllDayRange(ev.start, ev.end);
-            startParam = { date: startDate };
-            endParam = { date: endDate };
-          } else {
-            startParam = { dateTime: ev.start };
-            endParam = { dateTime: ev.end };
-          }
-
-          await window.gapi.client.calendar.events.insert({
-            calendarId: "primary",
-            resource: {
-              summary: ev.title,
-              description: `[${ev.category}] ${ev.description || ""}\n\n📍 채널: ${ev.channel || "N/A"}\n📦 산출물: ${ev.deliverables?.join(", ") || "N/A"}`,
-              start: startParam,
-              end: endParam,
-              colorId: getCategoryColorId(ev.category),
-              attendees: Array.isArray(ev.attendees) && ev.attendees.length > 0
-                ? ev.attendees.map((email) => ({ email }))
-                : undefined,
-              reminders:
-                Array.isArray(ev.reminders_minutes) && ev.reminders_minutes.length > 0
-                  ? {
-                      useDefault: false,
-                      overrides: ev.reminders_minutes.map((m) => ({
-                        method: "popup",
-                        minutes: m,
-                      })),
-                    }
-                  : undefined,
-            },
-          });
-          successCount++;
-        } catch (err) {
-          console.error(`Failed to insert event "${ev.title}":`, err);
-          errors.push(ev.title);
-        }
+      // 현재 Google API 토큰 가져오기
+      const token = (window.gapi?.client as any)?.getToken?.();
+      if (!token?.access_token) {
+        alert("Google 인증 토큰이 없습니다. 다시 로그인해주세요.");
+        return;
       }
 
-      // ✅ 결과 안내
-      let message = `✅ ${successCount}개 이벤트를 Google Calendar에 등록했습니다!`;
-      if (errors.length > 0) {
-        message += `\n\n⚠️ 실패 (${errors.length}개):\n${errors.join("\n")}`;
+      // 선택된 액션만 포함한 플랜 생성
+      const selectedActionPlan = {
+        ...actionPlan,
+        items: actionPlan.items.filter(item => selectedActionIds.has(item.id))
+      };
+
+      // Google Calendar API를 사용하여 직접 등록
+      const result = await registerActionPlanDirectly(selectedActionPlan, token.access_token);
+      setRegistrationResult(result);
+
+      // 성공적으로 등록된 경우 캘린더 새로고침
+      if (result.success > 0) {
+        await loadMyCalendar();
+      }
+
+      // 결과 메시지 표시
+      let message = `✅ ${result.success}개 이벤트가 등록되었습니다.`;
+      if (result.failed > 0) {
+        message += `\n❌ ${result.failed}개 이벤트 등록 실패.`;
+      }
+      if (result.skipped > 0) {
+        message += `\n⏭️ ${result.skipped}개 이벤트 스킵됨 (중복).`;
       }
       alert(message);
 
-      // ✅ 플랜 범위 기반으로 재조회
-      await loadMyCalendar();
     } catch (error) {
-      console.error("Failed to insert events:", error);
-      alert("캘린더 등록 실패");
+      console.error('캘린더 등록 실패:', error);
+      alert(`캘린더 등록 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     } finally {
-      setIsLoading(false);
+      setIsRegistering(false);
     }
   };
 
-  // 카테고리별 Google Calendar 색상 ID
-  const getCategoryColorId = (category: string): string => {
-    const colorMap: Record<string, string> = {
-      "Setup": "9",      // 파란색
-      "R&D": "10",       // 초록색
-      "Content": "5",    // 노란색
-      "Influencer": "3", // 보라색
-      "Paid": "11",      // 빨간색
-      "Community": "4",  // 분홍색
-      "Ops": "8"         // 회색
-    };
-    return colorMap[category] || "1";
+  // 액션 아이템 선택/해제
+  const toggleActionSelection = (actionId: string) => {
+    const newSet = new Set(selectedActionIds);
+    if (newSet.has(actionId)) {
+      newSet.delete(actionId);
+    } else {
+      newSet.add(actionId);
+    }
+    setSelectedActionIds(newSet);
   };
 
   // 전체 선택/해제
   const toggleSelectAll = () => {
-    if (selectedEventIds.size === plan?.events.length) {
-      setSelectedEventIds(new Set());
+    if (!actionPlan) return;
+    
+    if (selectedActionIds.size === actionPlan.items.length) {
+      setSelectedActionIds(new Set());
     } else {
-      setSelectedEventIds(new Set(plan?.events.map(e => e.id) || []));
+      setSelectedActionIds(new Set(actionPlan.items.map(item => item.id)));
     }
   };
 
-  // 개별 선택/해제
-  const toggleEventSelection = (eventId: string) => {
-    const newSet = new Set(selectedEventIds);
-    if (newSet.has(eventId)) {
-      newSet.delete(eventId);
-    } else {
-      newSet.add(eventId);
+  // Google Calendar에 직접 액션 플랜 등록
+  const registerActionPlanDirectly = async (actionPlan: ActionPlan, accessToken: string) => {
+    if (!window.gapi?.client?.calendar) {
+      throw new Error("Google Calendar API가 로드되지 않았습니다");
     }
-    setSelectedEventIds(newSet);
+
+    const result = {
+      success: 0,
+      failed: 0,
+      skipped: 0,
+      details: {
+        success_items: [] as string[],
+        failed_items: [] as { title: string; error: string }[],
+        skipped_items: [] as string[],
+      },
+    };
+
+    // 우선순위별 색상 매핑
+    const priorityColors = {
+      'P0': '11', // 빨간색 (긴급)
+      'P1': '6',  // 주황색 (중요)
+      'P2': '9',  // 파란색 (일반)
+    };
+
+    for (const item of actionPlan.items) {
+      try {
+        // 시작/종료 시간 설정
+        let startTime: Date;
+        let endTime: Date;
+        let isAllDay = item.all_day || false;
+
+        if (item.start && item.end) {
+          startTime = new Date(item.start);
+          endTime = new Date(item.end);
+        } else {
+          // 기본값: 다음 영업일 10:00-11:00
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          if (tomorrow.getDay() === 0) tomorrow.setDate(tomorrow.getDate() + 1); // 일요일이면 월요일로
+          if (tomorrow.getDay() === 6) tomorrow.setDate(tomorrow.getDate() + 2); // 토요일이면 월요일로
+          tomorrow.setHours(10, 0, 0, 0);
+          startTime = tomorrow;
+          endTime = new Date(tomorrow.getTime() + 60 * 60 * 1000); // 1시간 후
+        }
+
+        // 기존 이벤트 중복 체크 (간단하게 시간 범위로만 체크)
+        const existingEvents = await window.gapi.client.calendar.events.list({
+          calendarId: 'primary',
+          timeMin: startTime.toISOString(),
+          timeMax: endTime.toISOString(),
+          singleEvents: true,
+          orderBy: 'startTime',
+        });
+
+        if (existingEvents.result.items && existingEvents.result.items.length > 0) {
+          result.skipped++;
+          result.details.skipped_items.push(item.title);
+          continue;
+        }
+
+        // 이벤트 생성
+        const event = {
+          summary: item.title,
+          description: [
+            item.description || '',
+            item.notes ? `\n추가 메모: ${item.notes}` : '',
+            item.channel ? `\n채널: ${item.channel}` : '',
+            `\n우선순위: ${item.priority || 'P2'}`,
+          ].filter(Boolean).join('\n'),
+          start: isAllDay 
+            ? { date: startTime.toISOString().split('T')[0] }
+            : { dateTime: startTime.toISOString() },
+          end: isAllDay 
+            ? { date: endTime.toISOString().split('T')[0] }
+            : { dateTime: endTime.toISOString() },
+          colorId: priorityColors[item.priority || 'P2'],
+          reminders: {
+            useDefault: false,
+            overrides: item.reminders?.map(r => ({
+              method: 'popup',
+              minutes: r.minutes_before,
+            })) || [{ method: 'popup', minutes: 30 }],
+          },
+          extendedProperties: {
+            private: {
+              clientRequestId: item.id,
+              actionPlanId: actionPlan.plan_title,
+            },
+          },
+        };
+
+        // 이벤트 등록
+        await window.gapi.client.calendar.events.insert({
+          calendarId: 'primary',
+          resource: event,
+        });
+
+        result.success++;
+        result.details.success_items.push(item.title);
+
+      } catch (itemError) {
+        console.error(`이벤트 등록 실패 (${item.title}):`, itemError);
+        result.failed++;
+        result.details.failed_items.push({
+          title: item.title,
+          error: itemError instanceof Error ? itemError.message : '알 수 없는 오류',
+        });
+      }
+    }
+
+    return result;
   };
 
-  const previewEvents = useMemo<CalendarEvent[]>(
-    () =>
-      (plan?.events || []).map((e, i) => ({
-        id: `p-${i}`,
-        title: e.title,
-        start: e.start,
-        end: e.end,
-        backgroundColor: e.color || "#2563eb",
-        borderColor: e.color || "#2563eb",
-      })),
-    [plan]
-  );
-
-  // 개발 모드 확인
-  const isDev = import.meta.env.DEV;
-  const hasApiKey = !!import.meta.env.VITE_OPENAI_API_KEY;
-  const hasGoogleClientId = !!import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
-      {/* 좌: 입력/버튼/미리보기 */}
-      <div className="space-y-3">
-        {/* 개발 모드 안내 */}
-        {isDev && (
-          <div className={`px-4 py-3 rounded-lg text-sm ${hasApiKey ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-yellow-50 text-yellow-700 border border-yellow-200'}`}>
-            {hasApiKey ? (
-              <div className="flex items-start gap-2">
-                <span className="text-lg">🤖</span>
-                <div>
-                  <div className="font-semibold">개발 모드: 실제 AI 호출</div>
-                  <div className="text-xs mt-1">OpenAI API가 직접 호출됩니다 (비용 발생)</div>
-                </div>
-              </div>
+    <div className="space-y-4 p-4">
+      {/* Google 로그인 상태 및 버튼 */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Calendar className="w-5 h-5 text-blue-600" />
+            <div>
+              <h4 className="font-semibold">Google Calendar 연동</h4>
+              <p className="text-sm text-gray-600">
+                {isSignedIn ? "✅ Google Calendar에 연결되었습니다" : "Google Calendar 연동이 필요합니다"}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {!isSignedIn ? (
+              <Button 
+                onClick={signIn}
+                disabled={isLoading}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Google 로그인
+              </Button>
             ) : (
-              <div className="flex items-start gap-2">
-                <span className="text-lg">🎭</span>
-                <div>
-                  <div className="font-semibold">개발 모드: Mock 데이터</div>
-                  <div className="text-xs mt-1">
-                    테스트용 샘플 데이터가 표시됩니다. 
-                    <br />실제 AI를 사용하려면 <code className="bg-yellow-100 px-1 rounded">.env</code>에 <code className="bg-yellow-100 px-1 rounded">VITE_OPENAI_API_KEY</code>를 설정하세요.
-                  </div>
+              <Button 
+                variant="outline" 
+                onClick={signOut}
+                disabled={isLoading}
+              >
+                로그아웃
+              </Button>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      {/* 전략 요약 영역 */}
+      {strategySummary && (
+        <Card className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+          <div className="flex items-start gap-3 mb-3">
+            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+              <Target className="w-4 h-4 text-white" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-blue-800 mb-2">마케팅 전략 분석</h3>
+              <div className="text-sm text-blue-700 whitespace-pre-line leading-relaxed">
+                {strategySummary}
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* 메인 콘텐츠 영역 - 리사이즈 가능 (데스크톱만) */}
+      <div className="hidden lg:flex resize-container gap-2 h-[calc(100vh-16rem)]">
+        {/* 좌: AI 채팅 사이드바 */}
+        <div 
+          className="h-full flex-shrink-0"
+          style={{ width: `${chatWidth}%` }}
+        >
+          <AIChatSidebar 
+            onActionPlanGenerated={handleActionPlanGenerated}
+            isGoogleSignedIn={isSignedIn}
+          />
+        </div>
+
+        {/* 리사이즈 핸들 */}
+        <div 
+          className="w-1 bg-gray-300 hover:bg-blue-500 cursor-col-resize flex-shrink-0 transition-colors relative group"
+          onMouseDown={handleMouseDown}
+        >
+          <div className="absolute inset-0 w-3 -left-1 bg-transparent hover:bg-blue-100/50 transition-colors" />
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="w-0.5 h-8 bg-blue-500 rounded-full" />
+          </div>
+        </div>
+
+        {/* 우: Google Calendar */}
+        <Card 
+          className="p-3 h-full flex flex-col flex-1 min-w-0 calendar-container"
+          style={{ width: `${100 - chatWidth}%` }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="font-semibold">내 Google Calendar</h4>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={loadMyCalendar}
+              disabled={!isSignedIn}
+            >
+              새로고침
+            </Button>
+          </div>
+          <div className="flex-1">
+            {isSignedIn ? (
+              <FullCalendar
+                plugins={[dayGridPlugin, interactionPlugin]}
+                initialView="dayGridMonth"
+                events={myEvents}
+                height="100%"
+                headerToolbar={{
+                  left: 'prev,next today',
+                  center: 'title',
+                  right: 'dayGridMonth,dayGridWeek'
+                }}
+                dayMaxEvents={3}
+                moreLinkClick="popover"
+                eventDisplay="block"
+                eventTextColor="#ffffff"
+                eventBackgroundColor="#3b82f6"
+                eventBorderColor="#1d4ed8"
+                dayHeaderFormat={{ weekday: 'short' }}
+                nowIndicator={true}
+                editable={true}
+                selectable={true}
+                selectMirror={true}
+                dayMaxEventRows={false}
+                weekends={true}
+                firstDay={1}
+                locale="ko"
+                buttonText={{
+                  today: '오늘',
+                  month: '월',
+                  week: '주',
+                  day: '일'
+                }}
+                titleFormat={{ year: 'numeric', month: 'long' }}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                <div className="text-center">
+                  <Calendar className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                  <p>Google 로그인이 필요합니다</p>
                 </div>
               </div>
             )}
           </div>
-        )}
+        </Card>
+      </div>
 
-        {/* Google 로그인 상태 안내 */}
-        {!hasGoogleClientId && (
-          <div className="px-4 py-3 rounded-lg text-sm bg-red-50 text-red-700 border border-red-200">
-            <div className="flex items-start gap-2">
-              <span className="text-lg">⚠️</span>
-              <div>
-                <div className="font-semibold">Google 로그인 불가</div>
-                <div className="text-xs mt-1">
-                  <code className="bg-red-100 px-1 rounded">VITE_GOOGLE_CLIENT_ID</code>가 설정되지 않았습니다.
-                  <br />Google 로그인 기능을 사용하려면 환경 변수를 설정하세요.
+      {/* 모바일 레이아웃 */}
+      <div className="lg:hidden space-y-4 h-[calc(100vh-16rem)]">
+        <div className="h-[50%]">
+          <AIChatSidebar 
+            onActionPlanGenerated={handleActionPlanGenerated}
+            isGoogleSignedIn={isSignedIn}
+          />
+        </div>
+        <div className="h-[50%]">
+          <Card className="p-3 h-full flex flex-col">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-semibold">내 Google Calendar</h4>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={loadMyCalendar}
+                disabled={!isSignedIn}
+              >
+                새로고침
+              </Button>
+            </div>
+            <div className="flex-1">
+              {isSignedIn ? (
+                <FullCalendar
+                  plugins={[dayGridPlugin, interactionPlugin]}
+                  initialView="dayGridMonth"
+                  events={myEvents}
+                  height="100%"
+                  headerToolbar={{
+                    left: 'prev,next',
+                    center: 'title',
+                    right: 'today'
+                  }}
+                  dayMaxEvents={2}
+                  moreLinkClick="popover"
+                  eventDisplay="block"
+                  eventTextColor="#ffffff"
+                  eventBackgroundColor="#3b82f6"
+                  eventBorderColor="#1d4ed8"
+                  dayHeaderFormat={{ weekday: 'short' }}
+                  nowIndicator={true}
+                  firstDay={1}
+                  locale="ko"
+                  buttonText={{
+                    today: '오늘'
+                  }}
+                  titleFormat={{ year: 'numeric', month: 'long' }}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  <div className="text-center">
+                    <Calendar className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                    <p>Google 로그인이 필요합니다</p>
+                  </div>
                 </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* 액션 플랜 표시 영역 - 하단으로 이동 */}
+      {actionPlan && (
+        <Card className="p-4 bg-gradient-to-r from-orange-50 to-yellow-50 border-orange-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Target className="w-6 h-6 text-orange-600" />
+              <div>
+                <h3 className="text-lg font-bold text-orange-800">{actionPlan.plan_title}</h3>
+                <p className="text-sm text-orange-600">
+                  {selectedActionIds.size}/{actionPlan.items.length}개 선택됨
+                </p>
               </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={toggleSelectAll}
+                className="text-orange-600 border-orange-300 hover:bg-orange-50"
+              >
+                {selectedActionIds.size === actionPlan.items.length ? "전체 해제" : "전체 선택"}
+              </Button>
+              <Button
+                onClick={handleRegisterToCalendar}
+                disabled={!isSignedIn || isRegistering || selectedActionIds.size === 0}
+                className="bg-orange-600 hover:bg-orange-700 text-white"
+              >
+                {isRegistering ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    등록 중...
+                  </>
+                ) : (
+                  <>
+                    <Calendar className="w-4 h-4 mr-2" />
+                    선택 항목 등록 ({selectedActionIds.size})
+                  </>
+                )}
+              </Button>
             </div>
           </div>
-        )}
 
-        <div className="flex gap-2">
-          {!isSignedIn ? (
-            <button 
-              className="px-3 py-2 rounded bg-black text-white hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors" 
-              onClick={signIn}
-              disabled={isLoading}
-            >
-              Google 로그인
-            </button>
-          ) : (
-            <button 
-              className="px-3 py-2 rounded border hover:bg-gray-50 transition-colors" 
-              onClick={signOut}
-              disabled={isLoading}
-            >
-              로그아웃
-            </button>
-          )}
-          <button 
-            className="px-3 py-2 rounded bg-blue-600 text-white disabled:bg-gray-400 disabled:cursor-not-allowed" 
-            onClick={generatePlan}
-            disabled={isLoading}
-          >
-            {isLoading ? "생성 중..." : "스케줄 생성(GPT)"}
-          </button>
-          <button 
-            className="px-3 py-2 rounded bg-green-600 text-white disabled:bg-gray-400 disabled:cursor-not-allowed" 
-            onClick={insertSelected}
-            disabled={isLoading || !plan?.events?.length || selectedEventIds.size === 0}
-          >
-            {isLoading ? "등록 중..." : `선택 항목 등록 (${selectedEventIds.size})`}
-          </button>
-        </div>
-
-        <textarea
-          value={brief}
-          onChange={(e) => setBrief(e.target.value)}
-          className="w-full h-32 p-3 rounded border text-sm"
-          placeholder="예: 이제 막 개업한 동네 카페입니다. 신규 고객을 늘리고 싶습니다."
-        />
-
-        {/* 플랜 정보 표시 */}
-        {plan && (
-          <div className="space-y-3">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-bold text-lg mb-2">{plan.summary}</h3>
-              <div className="text-sm text-gray-700">
-                <div className="mb-2">
-                  <span className="font-semibold">기간:</span> {plan.timeframe.start} ~ {plan.timeframe.end}
-                </div>
-                {plan.assumptions && plan.assumptions.length > 0 && (
-                  <div className="mb-2">
-                    <span className="font-semibold">가정사항:</span>
-                    <ul className="list-disc list-inside ml-2">
-                      {plan.assumptions.map((a, i) => (
-                        <li key={i}>{a}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                <div>
-                  <span className="font-semibold">전략:</span> {plan.strategy_pillars.join(" → ")}
-                </div>
-              </div>
-            </div>
-
-            {/* 이벤트 리스트 (체크박스) */}
-            <div className="border rounded-lg p-3 max-h-96 overflow-y-auto">
-              <div className="flex items-center justify-between mb-3 sticky top-0 bg-white pb-2 border-b">
-                <div className="font-semibold">일정 목록 ({plan.events.length}개)</div>
-                <button 
-                  onClick={toggleSelectAll}
-                  className="text-sm px-3 py-1 rounded border hover:bg-gray-50"
-                >
-                  {selectedEventIds.size === plan.events.length ? "전체 해제" : "전체 선택"}
-                </button>
-              </div>
-              <div className="space-y-2">
-                {plan.events.map((event) => (
-                  <label 
-                    key={event.id}
-                    className="flex items-start gap-3 p-3 rounded hover:bg-gray-50 cursor-pointer border"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedEventIds.has(event.id)}
-                      onChange={() => toggleEventSelection(event.id)}
-                      className="mt-1 w-4 h-4"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span 
-                          className="inline-block w-3 h-3 rounded-full"
-                          style={{ backgroundColor: event.color }}
-                        />
-                        <span className="font-semibold text-sm">{event.title}</span>
-                        <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">{event.category}</span>
+          {/* 액션 아이템 리스트 - 체크박스 포함 */}
+          <div className="space-y-3 mb-4">
+            {actionPlan.items.map((item, index) => (
+              <div 
+                key={item.id} 
+                className={`bg-white rounded-lg p-4 border-2 transition-all cursor-pointer ${
+                  selectedActionIds.has(item.id) 
+                    ? 'border-orange-400 bg-orange-50' 
+                    : 'border-gray-200 hover:border-orange-300'
+                }`}
+                onClick={() => toggleActionSelection(item.id)}
+              >
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedActionIds.has(item.id)}
+                    onChange={() => toggleActionSelection(item.id)}
+                    className="mt-1 w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between mb-2">
+                      <h4 className="font-semibold text-gray-800 text-sm">{item.title}</h4>
+                      <Badge 
+                        variant={item.priority === 'P0' ? 'destructive' : item.priority === 'P1' ? 'default' : 'secondary'}
+                        className="text-xs"
+                      >
+                        {item.priority}
+                      </Badge>
+                    </div>
+                    {item.description && (
+                      <div className="text-xs text-gray-600 mb-2">
+                        <p className="mb-1">{item.description.split(' | ')[0]}</p>
+                        {item.description.includes('전략:') && (
+                          <p className="text-orange-600 font-medium">
+                            💡 {item.description.split('전략: ')[1]?.split(' | ')[0]}
+                          </p>
+                        )}
+                        {item.description.includes('과정:') && (
+                          <p className="text-blue-600 text-xs mt-1">
+                            📋 {item.description.split('과정: ')[1]}
+                          </p>
+                        )}
                       </div>
-                      <div className="text-xs text-gray-600 mb-1">
-                        {event.start.slice(0, 16).replace('T', ' ')} ~ {event.end.slice(11, 16)}
-                      </div>
-                      {event.description && (
-                        <div className="text-xs text-gray-700 mb-1">{event.description}</div>
+                    )}
+                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                      {item.channel && (
+                        <span className="flex items-center gap-1">
+                          <Target className="w-3 h-3" />
+                          {item.channel}
+                        </span>
                       )}
-                      {event.channel && (
-                        <div className="text-xs text-gray-500">
-                          📍 {event.channel}
-                        </div>
+                      {item.start && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {new Date(item.start).toLocaleDateString('ko-KR')}
+                        </span>
                       )}
-                      {event.deliverables && event.deliverables.length > 0 && (
-                        <div className="text-xs text-gray-500">
-                          📦 {event.deliverables.join(", ")}
-                        </div>
+                      {item.notes && (
+                        <span className="text-purple-600 font-medium">
+                          {item.notes.split(' | ')[0]}
+                        </span>
                       )}
                     </div>
-                  </label>
-                ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 등록 결과 표시 */}
+          {registrationResult && (
+            <div className="mt-4 p-3 bg-white rounded-lg border">
+              <h4 className="font-semibold mb-2 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                등록 결과
+              </h4>
+              <div className="flex gap-4 text-sm">
+                {registrationResult.success > 0 && (
+                  <span className="flex items-center gap-1 text-green-600">
+                    <CheckCircle className="w-4 h-4" />
+                    성공: {registrationResult.success}개
+                  </span>
+                )}
+                {registrationResult.failed > 0 && (
+                  <span className="flex items-center gap-1 text-red-600">
+                    <XCircle className="w-4 h-4" />
+                    실패: {registrationResult.failed}개
+                  </span>
+                )}
+                {registrationResult.skipped > 0 && (
+                  <span className="flex items-center gap-1 text-yellow-600">
+                    <AlertCircle className="w-4 h-4" />
+                    스킵: {registrationResult.skipped}개
+                  </span>
+                )}
               </div>
             </div>
-          </div>
-        )}
-
-        {/* 캘린더 미리보기 */}
-        {plan && (
-          <div className="border rounded p-3">
-            <div className="font-semibold mb-2">캘린더 미리보기</div>
-            <FullCalendar
-              plugins={[dayGridPlugin, interactionPlugin]}
-              initialView="dayGridMonth"
-              events={previewEvents}
-              height={400}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* 우: 내 구글 캘린더 */}
-      <div className="border rounded p-3">
-        <div className="flex items-center justify-between mb-2">
-          <div className="font-semibold">내 Google Calendar (30일)</div>
-          <button className="px-3 py-1 rounded border" onClick={loadMyCalendar}>
-            새로고침
-          </button>
-        </div>
-        <FullCalendar
-          plugins={[dayGridPlugin, interactionPlugin]}
-          initialView="dayGridMonth"
-          events={myEvents}
-          height={680}
-        />
-      </div>
+          )}
+        </Card>
+      )}
     </div>
   );
 }

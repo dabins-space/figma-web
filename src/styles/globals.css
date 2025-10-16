@@ -2,6 +2,170 @@
 @tailwind components;
 @tailwind utilities;
 
+/* FullCalendar 가독성 개선 */
+.calendar-container .fc {
+  font-size: 0.875rem;
+}
+
+.calendar-container .fc-header-toolbar {
+  margin-bottom: 1rem;
+}
+
+.calendar-container .fc-toolbar-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.calendar-container .fc-button {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  transition: all 0.2s;
+}
+
+.calendar-container .fc-button:hover {
+  background-color: #2563eb;
+  border-color: #2563eb;
+}
+
+.calendar-container .fc-button:focus {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.calendar-container .fc-daygrid-day {
+  border-color: #e5e7eb;
+}
+
+.calendar-container .fc-daygrid-day:hover {
+  background-color: #f9fafb;
+}
+
+.calendar-container .fc-daygrid-day-number {
+  color: #374151;
+  font-weight: 500;
+  padding: 0.25rem;
+}
+
+.calendar-container .fc-daygrid-day.fc-day-today {
+  background-color: #dbeafe;
+}
+
+.calendar-container .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+  background-color: #3b82f6;
+  color: white;
+  border-radius: 50%;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.calendar-container .fc-daygrid-event {
+  font-size: 0.75rem;
+  padding: 0.125rem 0.25rem;
+  margin: 0.125rem;
+  border-radius: 0.25rem;
+  font-weight: 500;
+}
+
+.calendar-container .fc-daygrid-event-harness {
+  margin: 0.125rem;
+}
+
+.calendar-container .fc-daygrid-more-link {
+  color: #6b7280;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.calendar-container .fc-daygrid-more-link:hover {
+  color: #3b82f6;
+}
+
+.calendar-container .fc-col-header-cell {
+  background-color: #f3f4f6;
+  border-color: #e5e7eb;
+  font-weight: 600;
+  color: #374151;
+  padding: 0.5rem 0;
+}
+
+.calendar-container .fc-scrollgrid {
+  border-color: #e5e7eb;
+}
+
+.calendar-container .fc-scrollgrid-sync-table {
+  border-color: #e5e7eb;
+}
+
+/* 이벤트 색상 개선 */
+.calendar-container .fc-event {
+  border-radius: 0.25rem;
+  border: none;
+  font-weight: 500;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.calendar-container .fc-event:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* 오늘 표시기 개선 */
+.calendar-container .fc-daygrid-day.fc-day-today .fc-daygrid-day-events {
+  position: relative;
+}
+
+/* 월/주 뷰 전환 버튼 스타일 */
+.calendar-container .fc-button-group {
+  border-radius: 0.375rem;
+  overflow: hidden;
+}
+
+.calendar-container .fc-button-group .fc-button {
+  border-radius: 0;
+  margin: 0;
+}
+
+.calendar-container .fc-button-group .fc-button:first-child {
+  border-top-left-radius: 0.375rem;
+  border-bottom-left-radius: 0.375rem;
+}
+
+.calendar-container .fc-button-group .fc-button:last-child {
+  border-top-right-radius: 0.375rem;
+  border-bottom-right-radius: 0.375rem;
+}
+
+.calendar-container .fc-button-group .fc-button.fc-button-active {
+  background-color: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+/* 팝오버 스타일 개선 */
+.calendar-container .fc-popover {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.calendar-container .fc-popover-header {
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0.75rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.calendar-container .fc-popover-body {
+  padding: 0.75rem;
+}
+
 /* Reset & Base Styles */
 * {
   box-sizing: border-box;
@@ -296,4 +460,46 @@ html {
 .fc-daygrid-event {
   padding: 2px 4px;
   font-size: 0.875rem;
+}
+
+/* Orange theme colors 추가 */
+:root {
+  /* Orange theme colors */
+  --orange-primary: #FF914D;
+  --orange-secondary: #FFB36C;
+  --orange-bg: #FFF5EB;
+  --orange-accent: #FFE1C1;
+  --orange-light: #FFF8F2;
+  --orange-text: #333333;
+  --orange-divider: #FFD2A8;
+}
+
+html {
+  font-size: var(--font-size);
+}
+
+/* Custom scrollbar styling */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #FFF8F2;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #FFD2A8;
+  border-radius: 10px;
+  transition: background 0.3s;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #FF914D;
+}
+
+/* For Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #FFD2A8 #FFF8F2;
 }
